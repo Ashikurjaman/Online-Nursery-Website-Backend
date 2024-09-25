@@ -7,8 +7,8 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const uri = process.env.DB_URL;
-// "mongodb+srv://Admin_1:admin_1@cluster0.dcb6faa.mongodb.net/treePlants?retryWrites=true&w=majority&appName=Cluster0";
+const uri =
+  "mongodb+srv://Admin_1:admin_1@cluster0.dcb6faa.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -23,13 +23,16 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    const database = client.db("treePlants");
-    const PlantCollection = database.collection("treePlant");
+    const PlantCollection = client.db("treePlants").collection("product");
+    // const PlantCollection = database.collection("treePlant");
+    const PlantCollectionCategory = client
+      .db("treePlants")
+      .collection("category");
 
     app.get("/products", async (req, res) => {
       let searchTerm = "";
-      if (req.body?.searchTerm) {
-        searchTerm = req.body.searchTerm;
+      if (req.query?.searchTerm) {
+        searchTerm = req.query.searchTerm;
       }
 
       const searchAble = ["title", "price"];
@@ -40,11 +43,11 @@ async function run() {
         })),
         price: { $gte: 0, $lte: 1000 },
       });
-      let limit = Number(payload?.limit);
+      let limit = Number(req.query?.limit);
 
       let skip = 0;
-      if (payload?.page) {
-        const page = Number(payload.page);
+      if (req.query?.page) {
+        const page = Number(req.query.page);
         skip = (page - 1) * limit;
       }
 
@@ -73,36 +76,41 @@ async function run() {
     });
     app.post("/category", async (req, res) => {
       const data = req.body;
-      console.log(user);
-      const result = await PlantCollection.insertOne(data);
+      const result = await PlantCollectionCategory.insertOne(data);
       console.log(`A document was inserted with the _id: ${result.insertedId}`);
       res.send(result);
     });
 
     app.get("/product/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: ObjectId(id) };
+      const query = { _id: new ObjectId(id) };
       const product = await PlantCollection.findOne(query);
+      res.send(product);
+    });
+    app.get("/category/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const product = await PlantCollectionCategory.findOne(query);
       res.send(product);
     });
 
     app.delete("/product/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: ObjectId(id) };
+      const query = { _id: new ObjectId(id) };
       const result = await PlantCollection.deleteOne(query);
       res.send(result);
     });
     app.delete("/category/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await PlantCollection.deleteOne(query);
+      const query = { _id: new ObjectId(id) };
+      const result = await PlantCollectionCategory.deleteOne(query);
       res.send(result);
     });
     app.patch("/product/:id", async (req, res) => {
       const id = req.params.id;
       const data = req.body;
       const result = await PlantCollection.findOneAndUpdate(
-        { _id: ObjectId(id) },
+        { _id: new ObjectId(id) },
         { $set: data },
         { new: true }
       );
@@ -112,8 +120,8 @@ async function run() {
     app.patch("/category/:id", async (req, res) => {
       const id = req.params.id;
       const data = req.body;
-      const result = await PlantCollection.findOneAndUpdate(
-        { _id: ObjectId(id) },
+      const result = await PlantCollectionCategory.findOneAndUpdate(
+        { _id: new ObjectId(id) },
         { $set: data },
         { new: true }
       );
