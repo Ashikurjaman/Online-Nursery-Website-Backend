@@ -1,14 +1,14 @@
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const express = require('express')
-const cors = require('cors')
-const app = express()
-const port = process.env.PORT || 3000
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const express = require("express");
+const cors = require("cors");
+const app = express();
+const port = process.env.PORT || 3000;
 
-app.use(cors())
-app.use(express.json())
+app.use(cors());
+app.use(express.json());
 
-
-const uri = "mongodb+srv://test1:test123@cluster0.dcb6faa.mongodb.net/?retryWrites=true&w=majority";
+const uri = process.env.DB_URL;
+// "mongodb+srv://Admin_1:admin_1@cluster0.dcb6faa.mongodb.net/treePlants?retryWrites=true&w=majority&appName=Cluster0";
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -16,75 +16,126 @@ const client = new MongoClient(uri, {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    const database = client.db("usersDB");
-    const userCollection = database.collection("users");
+    const database = client.db("treePlants");
+    const PlantCollection = database.collection("treePlant");
 
+    app.get("/products", async (req, res) => {
+      let searchTerm = "";
+      if (req.body?.searchTerm) {
+        searchTerm = req.body.searchTerm;
+      }
 
-      app.get('/users', async(req,res)=>{
-        const curser = userCollection.find();
-        const result = await curser.toArray();
-        res.send(result);
-      })
+      const searchAble = ["title", "price"];
 
-    app.post('/users', async(req, res)=>{
-      const user = req.body;
-      console.log(user);
-      const result = await userCollection.insertOne(user);
-      console.log(`A document was inserted with the _id: ${result.insertedId}`);
-      res.send(result)
+      const searchProduct = PlantCollection.find({
+        $or: searchAble.map((field) => ({
+          [field]: { $regex: searchTerm, $options: "i" },
+        })),
+        price: { $gte: 0, $lte: 1000 },
+      });
+      let limit = Number(payload?.limit);
+
+      let skip = 0;
+      if (payload?.page) {
+        const page = Number(payload.page);
+        skip = (page - 1) * limit;
+      }
+
+      const excludeField = ["searchTerm", limit];
+      const queryObj = { ...req.query };
+
+      excludeField.forEach((e) => delete queryObj[e]);
+
+      const result = await searchProduct.find(queryObj).skip(skip).limit(limit);
+      console.log(result);
+
+      res.send(result);
     });
 
-    app.get('/users/:id',async(req,res)=>{
-      const id = req.params.id;
-      const query = {_id: new ObjectId (id)} 
-      const user = await userCollection.findOne(query);
-      res.send(user)
-    })
+    app.post("/order", async (req, res) => {
+      const data = req.body;
+      const result = await PlantCollection.insertOne(data);
+      console.log(`A document was inserted with the _id: ${result.insertedId}`);
+      res.send(result);
+    });
+    app.post("/product", async (req, res) => {
+      const data = req.body;
+      const result = await PlantCollection.insertOne(data);
+      console.log(`A document was inserted with the _id: ${result.insertedId}`);
+      res.send(result);
+    });
+    app.post("/category", async (req, res) => {
+      const data = req.body;
+      console.log(user);
+      const result = await PlantCollection.insertOne(data);
+      console.log(`A document was inserted with the _id: ${result.insertedId}`);
+      res.send(result);
+    });
 
-    app.delete('/users/:id',async(req,res)=>{
+    app.get("/product/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId (id)} 
-      const result = await userCollection.deleteOne(query);
-      res.send(result)
-    })
-    app.put('/users/:id',async(req,res)=>{
+      const query = { _id: ObjectId(id) };
+      const product = await PlantCollection.findOne(query);
+      res.send(product);
+    });
+
+    app.delete("/product/:id", async (req, res) => {
       const id = req.params.id;
-      const user = req.body;
-      const filter = {_id: new ObjectId (id)} 
-      const options = { upsert: true };
-      const updateDoc = {
-        $set: {
-          name:user.name,
-          email:user.email
-        },
-      };
-      const result = await userCollection.updateOne(filter, updateDoc, options);
-      res.send(result)
-    })
+      const query = { _id: ObjectId(id) };
+      const result = await PlantCollection.deleteOne(query);
+      res.send(result);
+    });
+    app.delete("/category/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await PlantCollection.deleteOne(query);
+      res.send(result);
+    });
+    app.patch("/product/:id", async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      const result = await PlantCollection.findOneAndUpdate(
+        { _id: ObjectId(id) },
+        { $set: data },
+        { new: true }
+      );
+
+      res.send(result);
+    });
+    app.patch("/category/:id", async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      const result = await PlantCollection.findOneAndUpdate(
+        { _id: ObjectId(id) },
+        { $set: data },
+        { new: true }
+      );
+
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
   } finally {
     // Ensures that the client will close when you finish/error
-     
   }
 }
 run().catch(console.dir);
 
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
 
-
-app.get('/', (req, res) => {
-    res.send('Hello World!')
-  })
-
-  app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
-  })
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`);
+});
