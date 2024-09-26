@@ -29,9 +29,16 @@ async function run() {
       .db("treePlants")
       .collection("category");
 
+    app.get("/product", async (req, res) => {
+      const result = await PlantCollection.find();
+      res.send(result);
+    });
+
     app.get("/products", async (req, res) => {
+      let data = req.params;
+      console.log(data);
       let searchTerm = "";
-      if (req.query?.searchTerm) {
+      if (req.params?.searchTerm) {
         searchTerm = req.query.searchTerm;
       }
 
@@ -46,6 +53,7 @@ async function run() {
       let limit = Number(req.query?.limit);
 
       let skip = 0;
+
       if (req.query?.page) {
         const page = Number(req.query.page);
         skip = (page - 1) * limit;
