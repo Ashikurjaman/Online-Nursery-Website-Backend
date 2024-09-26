@@ -21,10 +21,9 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     const PlantCollection = client.db("treePlants").collection("product");
-    // const PlantCollection = database.collection("treePlant");
+
     const PlantCollectionCategory = client
       .db("treePlants")
       .collection("category");
@@ -43,7 +42,7 @@ async function run() {
         })),
         price: { $gte: 0, $lte: 1000 },
       });
-      let limit = Number(req.query?.limit);
+      let limit = Number(req.query?.limit) || 10;
 
       let skip = 0;
       if (req.query?.page) {
@@ -51,12 +50,12 @@ async function run() {
         skip = (page - 1) * limit;
       }
 
-      const excludeField = ["searchTerm", limit];
+      const excludeField = ["searchTerm", limit, page];
       const queryObj = { ...req.query };
 
       excludeField.forEach((e) => delete queryObj[e]);
 
-      const result = await searchProduct.find(queryObj).skip(skip).limit(limit);
+      const result = await searchProduct.find().skip(skip).limit(limit);
       console.log(result);
 
       res.send(result);
